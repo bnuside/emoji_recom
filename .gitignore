@@ -102,5 +102,5 @@ ENV/
 
 .idea
 .gitignore
-*.txt
 BUILD
+*.txt
