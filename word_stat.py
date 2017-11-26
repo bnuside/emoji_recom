@@ -9,19 +9,13 @@ st_path = 'sampletest.txt'
 full_processed_path = 'emoji_sample_processed.txt'
 sample_process_path = 'emoji_sample_head_process.txt'
 
-emoji_pattern = re.compile("["
+emoji_pattern = re.compile("[" u"\U00002600-\U000026FF"  # Miscellaneous Symbols
                                u"\U0001F600-\U0001F64F"  # emoticons
                                u"\U0001F300-\U0001F5FF"  # symbols & pictographs
                                u"\U0001F680-\U0001F6FF"  # transport & map symbols
                                u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
                                "]{1}?", flags=re.UNICODE)
-emoji_pattern2 = re.compile(
-    u"(\ud83d[\ude00-\ude4f])|"  # emoticons
-    u"(\ud83c[\udf00-\uffff])|"  # symbols & pictographs (1 of 2)
-    u"(\ud83d[\u0000-\uddff])|"  # symbols & pictographs (2 of 2)
-    u"(\ud83d[\ude80-\udeff])|"  # transport & map symbols
-    u"(\ud83c[\udde0-\uddff])"  # flags (iOS)
-    "+", flags=re.UNICODE)
+
 
 non_emoji_pattern = re.compile(
     # '[^a-zA-Z0-9]'
@@ -29,15 +23,20 @@ non_emoji_pattern = re.compile(
     # '[^\w@]{1}?'
 )
 
+unknown_pattern = re.compile(u'\s+\w*['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]\w*\s+')
+
 def clean_data():
     start_t = time.time()
-    fo = open(full_orignal_path, 'r')
-    content = fo.read()
-    fo.close()
 
-    fp = open(full_processed_path, 'w')
+    fr = open(full_orignal_path, 'r')
+    content = fr.read(1024)
+    fr.close()
     make_log('finding all emojis')
     all_emoji = re.findall(non_emoji_pattern, content)
+
+    make_log('replacing all enter')
+    content.replace('\n', ' <eos> ')
+    make_log('enter replacement spent time: %ds' % (time.time() - start_t))
 
     make_log('distincting emojis')
     distincted_emoji = set(all_emoji)
@@ -47,12 +46,22 @@ def clean_data():
     make_log('replacing emoji')
     for emoji in distincted_emoji:
         content = content.replace(emoji, ' %s ' % emoji)
+    make_log('emoji replacement spent time: %ds' % (time.time() - start_t))
 
+    # make_log('find all unknowns')
+    # all_unknown = re.findall(unknown_pattern, content)
+    # make_log('distinct unknowns')
+    # distinced_unknow = set(all_unknown)
+    # make_log('replacing unknown')
+    # for u in distinced_unknow:
+    #     content = content.replace(u, ' %s ' % u)
+    # make_log('unknows replacement spent time: %ds' % (time.time() - start_t))
+
+    fw = open(full_processed_path, 'w')
     make_log('writing file')
-    # fp.seek(0, os.SEEK_SET)
-    fp.write(content)
-    fp.flush()
-    fp.close()
+    fw.write(content)
+    fw.flush()
+    fw.close()
     end_t = time.time()
     spend = end_t - start_t
     make_log(spend)
@@ -60,14 +69,12 @@ def clean_data():
 def word_freq():
     with open(full_processed_path, 'r') as f:
         content = f.read()
+        word_list = re.split('[\s\.]+', content)
 
-        make_log('replace enter and split')
-        word_list = re.split('\s+', content.replace('\n', ' <eos> '))
-
-        make_log('replacing unknown words')
-        for index in range(len(word_list)):
-            if not limit_filter(word_list[index]):
-                word_list[index] = '<unk>'
+        make_log('replacing unknown')
+        st = time.time()
+        make_unknown(word_list)
+        make_log('replacing unknown spent %ds' % int(time.time() - st))
 
         make_log('wordlist length: %d' % len(word_list))
         counter = collections.Counter(word_list)
@@ -78,62 +85,38 @@ def word_freq():
         make_log(et-st)
         words, _ = list(zip(*counter_pairs))
         make_log('length before filter: %d' % len(words))
-        # make_log(type(words))
+
+        words = list(filter(limit_filter, words))
         make_log('length after filter: %d' % len(words))
         make_log('writing word file: words.txt')
         with open('words.txt', 'w') as wf:
             wf.writelines('\n'.join(words))
 
-        pass
+def make_unknown(content):
+    pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
+    for index in range(len(content)):
+        if len(content[index]) > 20:
+            content[index] = '<unk>'
+            continue
+        mat = unknown_pattern.match(content[index])
+        if mat:
+            content[index] = '<unk>'
+            continue
+        mat = pat.match(content[index])
+        if mat:
+            content[index] = '<unk>'
+            continue
 
-def check_sample():
-    emoji_pattern = re.compile(".*["
-                               u"\U0001F600-\U0001F64F"  # emoticons
-                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                               "].*", flags=re.UNICODE)
-    emoji_pattern2 = re.compile(
-    u"(\ud83d[\ude00-\ude4f])|"  # emoticons
-    u"(\ud83c[\udf00-\uffff])|"  # symbols & pictographs (1 of 2)
-    u"(\ud83d[\u0000-\uddff])|"  # symbols & pictographs (2 of 2)
-    u"(\ud83d[\ude80-\udeff])|"  # transport & map symbols
-    u"(\ud83c[\udde0-\uddff])"  # flags (iOS)
-    "+", flags=re.UNICODE)
-
-    full_path = '/Users/side/Downloads/emoji_sample.txt'
-    with open(full_path, 'r') as f:
-        ret = f.readlines(10240)
-        for l in ret:
-            mat = emoji_pattern.match(l)
-            if mat:
-                make_log(l)
-
-def test_writelines():
-    l = ['one', 'two', 'three']
-    with open('test.txt', 'w')as tf:
-        tf.writelines('\n'.join(l))
-
-def test_emoji():
-    pat = re.compile('\W{1}?')
-    non_char = []
-    # with open(st_path, 'r') as f:
-    #     non_char = re.findall(non_emoji_pattern, f.read())
-    #     make_log(set(non_char))
-    s = 'hi i #$%^&*(!'
-    non_char = re.findall(non_emoji_pattern, s)
-    print(non_char)
 
 def make_log(m):
     print('%s -> %s' % (time.asctime(time.localtime(time.time())), str(m)))
 
 def limit_filter(word):
-    pat = re.compile(r'^[!@#$%^&*().?\'"/\[]{}|=+-_$')
-    return len(word) < 20 and not pat.match(word)
+    pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
+    mat = pat.match(word)
+    return len(word) < 20 and not mat
+
 
 if __name__ == '__main__':
     clean_data()
     word_freq()
-    # check_sample()
-    # test_writelines()
-    # test_emoji()
