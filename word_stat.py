@@ -17,19 +17,13 @@ emoji_pattern = re.compile("[" u"\U00002600-\U000026FF"  # Miscellaneous Symbols
                                "]{1}?", flags=re.UNICODE)
 
 
-non_emoji_pattern = re.compile(
-    # '[^a-zA-Z0-9]'
-    '[^\w\.\'"\-\?!,\\/\$\^\{\[\(\|\)\*\+>=&%#@]{1}?'
-    # '[^\w@]{1}?'
-)
-
 unknown_pattern = re.compile(u'\s+\w*['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]\w*\s+')
 
 def clean_data():
     start_t = time.time()
 
     fr = open(full_orignal_path, 'r')
-    content = fr.read(1024)
+    content = fr.read()
     fr.close()
     make_log('finding all emojis')
     all_emoji = re.findall(non_emoji_pattern, content)
