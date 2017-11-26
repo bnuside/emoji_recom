@@ -2,6 +2,7 @@ import collections
 import re
 import os
 import time
+import threading
 
 full_orignal_path = 'emoji_sample.txt'
 sample_orignal_path = 'emoji_sample_head.txt'
@@ -17,23 +18,23 @@ emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF" 
                                "]{1}?", flags=re.UNICODE)
 
 
-unknown_pattern = re.compile(u'\s+\w*['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]\w*\s+')
+unknown_pattern = re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
 
 def clean_data():
     start_t = time.time()
 
     fr = open(full_orignal_path, 'r')
-    content = fr.read()
+    content = fr.read(1*1024*1024)
     fr.close()
     make_log('finding all emojis')
     all_emoji = re.findall(emoji_pattern, content)
+    make_log('distincting emojis')
+    distincted_emoji = set(all_emoji)
+
 
     make_log('replacing all enter')
     content.replace('\n', ' <eos> ')
     make_log('enter replacement spent time: %ds' % (time.time() - start_t))
-
-    make_log('distincting emojis')
-    distincted_emoji = set(all_emoji)
     # print(all_emoji)
     # print(distincted_emoji)
 
@@ -41,15 +42,6 @@ def clean_data():
     for emoji in distincted_emoji:
         content = content.replace(emoji, ' %s ' % emoji)
     make_log('emoji replacement spent time: %ds' % (time.time() - start_t))
-
-    # make_log('find all unknowns')
-    # all_unknown = re.findall(unknown_pattern, content)
-    # make_log('distinct unknowns')
-    # distinced_unknow = set(all_unknown)
-    # make_log('replacing unknown')
-    # for u in distinced_unknow:
-    #     content = content.replace(u, ' %s ' % u)
-    # make_log('unknows replacement spent time: %ds' % (time.time() - start_t))
 
     fw = open(full_processed_path, 'w')
     make_log('writing file')
@@ -63,7 +55,7 @@ def clean_data():
 def word_freq():
     with open(full_processed_path, 'r') as f:
         content = f.read()
-        word_list = re.split('[\s\.]+', content)
+        word_list = re.split('[\s\.\!\?\(\),\*\":]+', content)
 
         make_log('replacing unknown')
         st = time.time()
@@ -87,7 +79,8 @@ def word_freq():
             wf.writelines('\n'.join(words))
 
 def make_unknown(content):
-    pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
+    pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:,]+|^\d+[\$%]*$|^\w{1}?$')
+    pat_pun = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:,]+$')
     for index in range(len(content)):
         if len(content[index]) > 20:
             content[index] = '<unk>'
@@ -100,6 +93,10 @@ def make_unknown(content):
         if mat:
             content[index] = '<unk>'
             continue
+
+        mat = re.search(pat_pun, content[index])
+        if mat:
+            content[index] = content[index][:mat.start()]
 
 
 def make_log(m):
