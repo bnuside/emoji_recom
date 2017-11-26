@@ -9,7 +9,7 @@ st_path = 'sampletest.txt'
 full_processed_path = 'emoji_sample_processed.txt'
 sample_process_path = 'emoji_sample_head_process.txt'
 
-emoji_pattern = re.compile("[" u"\U00002600-\U000026FF"  # Miscellaneous Symbols
+emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
                                u"\U0001F600-\U0001F64F"  # emoticons
                                u"\U0001F300-\U0001F5FF"  # symbols & pictographs
                                u"\U0001F680-\U0001F6FF"  # transport & map symbols
@@ -26,7 +26,7 @@ def clean_data():
     content = fr.read()
     fr.close()
     make_log('finding all emojis')
-    all_emoji = re.findall(non_emoji_pattern, content)
+    all_emoji = re.findall(emoji_pattern, content)
 
     make_log('replacing all enter')
     content.replace('\n', ' <eos> ')
