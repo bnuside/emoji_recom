@@ -106,7 +106,7 @@ def make_log(m):
     logfile.write(fm)
     logfile.write('\n')
     logfile.flush()
-    print(fm)
+    # print(fm)
 
 def limit_filter(word):
     pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
