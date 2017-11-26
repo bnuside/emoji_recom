@@ -3,11 +3,11 @@ import re
 import os
 import time
 
-full_path = '/Users/side/Downloads/emoji_sample.txt'
-sample_path = '/Users/side/Downloads/emoji_sample_head.txt'
+full_orignal_path = 'emoji_sample.txt'
+sample_orignal_path = 'emoji_sample_head.txt'
 st_path = 'sampletest.txt'
-
-process_path = full_path
+full_processed_path = 'emoji_sample_processed.txt'
+sample_process_path = 'emoji_sample_head_process.txt'
 
 emoji_pattern = re.compile("["
                                u"\U0001F600-\U0001F64F"  # emoticons
@@ -31,37 +31,44 @@ non_emoji_pattern = re.compile(
 
 def clean_data():
     start_t = time.time()
-    with open(process_path, 'r+') as f:
-        content = f.read()
-        make_log('finding all emojis')
-        all_emoji = re.findall(non_emoji_pattern, content)
+    fo = open(full_orignal_path, 'r')
+    content = fo.read()
+    fo.close()
 
-        make_log('distincting emojis')
-        distincted_emoji = set(all_emoji)
-        # print(all_emoji)
-        # print(distincted_emoji)
+    fp = open(full_processed_path, 'w')
+    make_log('finding all emojis')
+    all_emoji = re.findall(non_emoji_pattern, content)
 
-        make_log('replacing emoji')
-        for emoji in distincted_emoji:
-            content = content.replace(emoji, ' %s ' % emoji)
+    make_log('distincting emojis')
+    distincted_emoji = set(all_emoji)
+    # print(all_emoji)
+    # print(distincted_emoji)
 
-        make_log('writing file')
-        f.seek(0, os.SEEK_SET)
-        f.write(content)
+    make_log('replacing emoji')
+    for emoji in distincted_emoji:
+        content = content.replace(emoji, ' %s ' % emoji)
+
+    make_log('writing file')
+    # fp.seek(0, os.SEEK_SET)
+    fp.write(content)
+    fp.flush()
+    fp.close()
     end_t = time.time()
     spend = end_t - start_t
     make_log(spend)
 
 def word_freq():
-    full_path = '/Users/side/Downloads/emoji_sample.txt'
-    sample_path = '/Users/side/Downloads/emoji_sample_head.txt'
-    st_path = 'sampletest.txt'
-
-    with open(process_path, 'r') as f:
+    with open(full_processed_path, 'r') as f:
         content = f.read()
 
         make_log('replace enter and split')
         word_list = re.split('\s+', content.replace('\n', ' <eos> '))
+
+        make_log('replacing unknown words')
+        for index in range(len(word_list)):
+            if not limit_filter(word_list[index]):
+                word_list[index] = '<unk>'
+
         make_log('wordlist length: %d' % len(word_list))
         counter = collections.Counter(word_list)
         st = time.time()
@@ -71,9 +78,7 @@ def word_freq():
         make_log(et-st)
         words, _ = list(zip(*counter_pairs))
         make_log('length before filter: %d' % len(words))
-
-        words = list(filter(limit_filter, words))
-        make_log(type(words))
+        # make_log(type(words))
         make_log('length after filter: %d' % len(words))
         make_log('writing word file: words.txt')
         with open('words.txt', 'w') as wf:
