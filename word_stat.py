@@ -10,6 +10,8 @@ st_path = 'sampletest.txt'
 full_processed_path = 'emoji_sample_processed.txt'
 sample_process_path = 'emoji_sample_head_process.txt'
 
+logfile = open('process_log.txt', 'a')
+
 emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
                                u"\U0001F600-\U0001F64F"  # emoticons
                                u"\U0001F300-\U0001F5FF"  # symbols & pictographs
@@ -24,7 +26,8 @@ def clean_data():
     start_t = time.time()
 
     fr = open(full_orignal_path, 'r')
-    content = fr.read(1*1024*1024)
+    # content = fr.read(1*1024*1024)
+    content = fr.read()
     fr.close()
     make_log('finding all emojis')
     all_emoji = re.findall(emoji_pattern, content)
@@ -97,10 +100,13 @@ def make_unknown(content):
         mat = re.search(pat_pun, content[index])
         if mat:
             content[index] = content[index][:mat.start()]
-
-
 def make_log(m):
-    print('%s -> %s' % (time.asctime(time.localtime(time.time())), str(m)))
+    global logfile
+    fm = '%s -> %s' % (time.asctime(time.localtime(time.time())), str(m))
+    logfile.write(fm)
+    logfile.write('\n')
+    logfile.flush()
+    print(fm)
 
 def limit_filter(word):
     pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
@@ -111,3 +117,4 @@ def limit_filter(word):
 if __name__ == '__main__':
     clean_data()
     word_freq()
+    logfile.close()
