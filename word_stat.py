@@ -9,6 +9,9 @@ sample_orignal_path = 'emoji_sample_head.txt'
 st_path = 'sampletest.txt'
 full_processed_path = 'emoji_sample_processed.txt'
 sample_process_path = 'emoji_sample_head_process.txt'
+train_path = './data/emoji.train.txt'
+valid_path = './data/emoji.valid.txt'
+test_path = './data/emoji.test.txt'
 
 logfile = open('process_log.txt', 'a')
 
@@ -22,13 +25,8 @@ emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF" 
 
 unknown_pattern = re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
 
-def clean_data():
+def clean_data(content, finalpath):
     start_t = time.time()
-
-    fr = open(sample_orignal_path, 'r')
-    content = fr.read(1*1024*1024)
-    # content = fr.read()
-    fr.close()
 
     emojis = find_all_emojis(content)
     unknowns, puncwords = find_all_unknowns_and_puncwords(content)
@@ -49,7 +47,7 @@ def clean_data():
             content = content.replace(word, k)
     make_log('puncword replacement spent time: %ds' % (time.time() - start_t))
 
-    fw = open(full_processed_path, 'w')
+    fw = open(finalpath, 'w')
     make_log('writing file')
     fw.write(content)
     fw.flush()
@@ -58,8 +56,8 @@ def clean_data():
     spend = end_t - start_t
     make_log(spend)
 
-def word_freq():
-    with open(full_processed_path, 'r') as f:
+def word_freq(filepath):
+    with open(filepath, 'r') as f:
         content = f.read()
         make_log('replacing all enter')
         content.replace('\n', ' <eos> ')
@@ -76,7 +74,7 @@ def word_freq():
         words, _ = list(zip(*counter_pairs))
         make_log('length before filter: %d' % len(words))
 
-        words = list(filter(limit_filter, words))[:10000]
+        # words = list(filter(limit_filter, words))[:10000]
         make_log('length after filter: %d' % len(words))
         make_log('writing word file: words.txt')
         with open('words.txt', 'w') as wf:
@@ -142,7 +140,18 @@ def limit_filter(word):
     return len(word) < 20 and not mat
 
 
+def get_test_and_valid_data():
+    with open('emoji_sample.txt', 'r') as ef:
+        lines = ef.readlines()
+        valid_content = lines[10001:20000]
+        test_content = lines[20001:30000]
+
+        clean_data('\n'.join(valid_content), valid_path)
+        clean_data('\n'.join(test_content), test_path)
+
 if __name__ == '__main__':
-    # clean_data()
-    word_freq()
+    with open(sample_orignal_path, 'r') as sop:
+        clean_data(sop.read(), train_path)
+        word_freq(train_path)
+    get_test_and_valid_data()
     logfile.close()
