@@ -345,7 +345,7 @@ class MediumConfig(object):
   keep_prob = 0.5
   lr_decay = 0.8
   batch_size = 20
-  vocab_size = 10000
+  vocab_size = 20000
   rnn_mode = BLOCK
 
 
@@ -362,7 +362,7 @@ class LargeConfig(object):
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
-  vocab_size = 10000
+  vocab_size = 20000
   rnn_mode = BLOCK
 
 
