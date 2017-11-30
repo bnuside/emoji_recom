@@ -9,6 +9,9 @@ sample_orignal_path = 'emoji_sample_head.txt'
 st_path = 'sampletest.txt'
 full_processed_path = 'emoji_sample_processed.txt'
 sample_process_path = 'emoji_sample_head_process.txt'
+train_path = './data/emoji.train.txt'
+valid_path = './data/emoji.valid.txt'
+test_path = './data/emoji.test.txt'
 
 logfile = open('process_log.txt', 'a')
 
@@ -19,34 +22,37 @@ emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF" 
                                u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
                                "]{1}?", flags=re.UNICODE)
 
+split_pat = re.compile("([" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
+                               u"\U0001F600-\U0001F64F"  # emoticons
+                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                               "]{1}?)|[\s\.\!\?\(\),\*\":]+", flags=re.UNICODE)
+
 
 unknown_pattern = re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
 
-def clean_data():
+def pre_clean(filepath):
+    pass
+
+def clean_data(content, finalpath):
     start_t = time.time()
 
-    fr = open(full_orignal_path, 'r')
-    # content = fr.read(1*1024*1024)
-    content = fr.read()
-    fr.close()
-    make_log('finding all emojis')
-    all_emoji = re.findall(emoji_pattern, content)
-    make_log('distincting emojis')
-    distincted_emoji = set(all_emoji)
+    emojis = find_all_emojis(content)
+    unknowns, puncwords = find_all_unknowns_and_puncwords(content)
 
+    make_log('replacing unknown')
+    for unk in unknowns:
+        content = content.replace(unk, ' <unk> ')
+    make_log('unknowns replacement spent time: %ds' % (time.time() - start_t))
 
-    make_log('replacing all enter')
-    content.replace('\n', ' <eos> ')
-    make_log('enter replacement spent time: %ds' % (time.time() - start_t))
-    # print(all_emoji)
-    # print(distincted_emoji)
+    make_log('replacing puncword')
+    for k in puncwords.keys():
+        for word in puncwords[k]:
+            content = content.replace(word, k)
+    make_log('puncword replacement spent time: %ds' % (time.time() - start_t))
 
-    make_log('replacing emoji')
-    for emoji in distincted_emoji:
-        content = content.replace(emoji, ' %s ' % emoji)
-    make_log('emoji replacement spent time: %ds' % (time.time() - start_t))
-
-    fw = open(full_processed_path, 'w')
+    fw = open(finalpath, 'w')
     make_log('writing file')
     fw.write(content)
     fw.flush()
@@ -55,15 +61,13 @@ def clean_data():
     spend = end_t - start_t
     make_log(spend)
 
-def word_freq():
-    with open(full_processed_path, 'r') as f:
+def word_freq(filepath):
+    with open(filepath, 'r') as f:
         content = f.read()
-        word_list = re.split('[\s\.\!\?\(\),\*\":]+', content)
+        make_log('replacing all enter')
+        content.replace('\n', ' <eos> ')
 
-        make_log('replacing unknown')
-        st = time.time()
-        make_unknown(word_list)
-        make_log('replacing unknown spent %ds' % int(time.time() - st))
+        word_list = re.split(split_pat, content.lower())
 
         make_log('wordlist length: %d' % len(word_list))
         counter = collections.Counter(word_list)
@@ -75,31 +79,58 @@ def word_freq():
         words, _ = list(zip(*counter_pairs))
         make_log('length before filter: %d' % len(words))
 
-        words = list(filter(limit_filter, words))
+        # words = list(filter(limit_filter, words))[:10000]
         make_log('length after filter: %d' % len(words))
         make_log('writing word file: words.txt')
         with open('words.txt', 'w') as wf:
             wf.writelines('\n'.join(words))
 
-def make_unknown(content):
-    pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:,]+|^\d+[\$%]*$|^\w{1}?$')
-    pat_pun = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:,]+$')
-    for index in range(len(content)):
-        if len(content[index]) > 20:
-            content[index] = '<unk>'
-            continue
-        mat = unknown_pattern.match(content[index])
-        if mat:
-            content[index] = '<unk>'
-            continue
-        mat = pat.match(content[index])
-        if mat:
-            content[index] = '<unk>'
+def find_all_emojis(content):
+    make_log('finding all emojis')
+    all_emoji = re.findall(emoji_pattern, content)
+    make_log('distincting emojis')
+    return set(all_emoji)
+
+
+def find_all_unknowns_and_puncwords(content):
+    pat_other = re.compile('[\!@#\$%\^&\*\(\)\.\?"/\\\[\]{}\|=\+\-_\$;:,]+|^\d+[\$%]*$|^[\d:/\-]+$')
+    pat_pun = re.compile('[\!@#\$%\^&\*\(\)\.\?"/\\\[\]{}\|=\+\-_\$;:,\d]+$')
+    pat_dupword = re.compile('.*(?P<dup>\w)(?P=dup){3,}.*')
+
+    make_log('finding all unknowns')
+    word_list = re.split('[\s\.\?\!\,\(\)\"\;]+', content)
+    ulist = []
+    pdict = {}
+    for word in word_list:
+        if len(word) > 20:
+            ulist.append(word)
             continue
 
-        mat = re.search(pat_pun, content[index])
+        mat = unknown_pattern.match(word)
         if mat:
-            content[index] = content[index][:mat.start()]
+            ulist.append(word)
+            continue
+
+        mat = pat_other.match(word)
+        if mat:
+            ulist.append(word)
+            continue
+
+        mat = pat_dupword.match(word)
+        if mat:
+            ulist.append(word)
+
+        mat = re.search(pat_pun, word)
+        if mat:
+            k = word[:mat.start()]
+            if k not in pdict.keys():
+                pdict.setdefault(k, [])
+            pdict[k].append(word)
+
+    ulist = set(ulist)
+    return ulist, pdict
+
+
 def make_log(m):
     global logfile
     fm = '%s -> %s' % (time.asctime(time.localtime(time.time())), str(m))
@@ -114,7 +145,26 @@ def limit_filter(word):
     return len(word) < 20 and not mat
 
 
+def get_test_and_valid_data():
+    with open('emoji_sample.txt', 'r') as ef:
+        lines = ef.readlines()
+        valid_content = lines[10001:20000]
+        test_content = lines[20001:30000]
+
+        clean_data('\n'.join(valid_content), valid_path)
+        clean_data('\n'.join(test_content), test_path)
+
+def test_split():
+    with open(full_orignal_path, 'r') as fr:
+        content = fr.read(1024*1024)
+        words = re.split(split_pat, content)
+        for w in words:
+            print(w)
+
 if __name__ == '__main__':
-    clean_data()
-    word_freq()
+    with open(full_orignal_path, 'r') as sop:
+        clean_data(sop.read(1024*1024), full_processed_path)
+        word_freq(full_processed_path)
+    # get_test_and_valid_data()
+    # test_split()
     logfile.close()
