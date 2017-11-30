@@ -75,7 +75,7 @@ logging = tf.logging
 flags.DEFINE_string(
     "model", "small",
     "A type of model. Possible options are: small, medium, large.")
-flags.DEFINE_string("data_path", './simple-examples/data/',
+flags.DEFINE_string("data_path", './data/',
                     "Where the training/test data is stored.")
 flags.DEFINE_string("save_path", None,
                     "Model output directory.")

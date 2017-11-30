@@ -22,19 +22,24 @@ emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF" 
                                u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
                                "]{1}?", flags=re.UNICODE)
 
+split_pat = re.compile("([" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
+                               u"\U0001F600-\U0001F64F"  # emoticons
+                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                               "]{1}?)|[\s\.\!\?\(\),\*\":]+", flags=re.UNICODE)
+
 
 unknown_pattern = re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
+
+def pre_clean(filepath):
+    pass
 
 def clean_data(content, finalpath):
     start_t = time.time()
 
     emojis = find_all_emojis(content)
     unknowns, puncwords = find_all_unknowns_and_puncwords(content)
-
-    make_log('replacing emoji')
-    for emoji in emojis:
-        content = content.replace(emoji, ' %s ' % emoji)
-    make_log('emoji replacement spent time: %ds' % (time.time() - start_t))
 
     make_log('replacing unknown')
     for unk in unknowns:
@@ -62,7 +67,7 @@ def word_freq(filepath):
         make_log('replacing all enter')
         content.replace('\n', ' <eos> ')
 
-        word_list = re.split('[\s\.\!\?\(\),\*\":]+', content.lower())
+        word_list = re.split(split_pat, content.lower())
 
         make_log('wordlist length: %d' % len(word_list))
         counter = collections.Counter(word_list)
@@ -149,9 +154,17 @@ def get_test_and_valid_data():
         clean_data('\n'.join(valid_content), valid_path)
         clean_data('\n'.join(test_content), test_path)
 
+def test_split():
+    with open(full_orignal_path, 'r') as fr:
+        content = fr.read(1024*1024)
+        words = re.split(split_pat, content)
+        for w in words:
+            print(w)
+
 if __name__ == '__main__':
-    with open(sample_orignal_path, 'r') as sop:
-        clean_data(sop.read(), train_path)
-        word_freq(train_path)
-    get_test_and_valid_data()
+    with open(full_orignal_path, 'r') as sop:
+        clean_data(sop.read(1024*1024), full_processed_path)
+        word_freq(full_processed_path)
+    # get_test_and_valid_data()
+    # test_split()
     logfile.close()
