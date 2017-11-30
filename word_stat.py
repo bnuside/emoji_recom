@@ -2,66 +2,73 @@ import collections
 import re
 import os
 import time
+import threading
 
-full_path = '/Users/side/Downloads/emoji_sample.txt'
-sample_path = '/Users/side/Downloads/emoji_sample_head.txt'
+full_orignal_path = 'emoji_sample.txt'
+sample_orignal_path = 'emoji_sample_head.txt'
 st_path = 'sampletest.txt'
+full_processed_path = 'emoji_sample_processed.txt'
+sample_process_path = 'emoji_sample_head_process.txt'
+train_path = './data/emoji.train.txt'
+valid_path = './data/emoji.valid.txt'
+test_path = './data/emoji.test.txt'
 
-process_path = full_path
+logfile = open('process_log.txt', 'a')
 
-emoji_pattern = re.compile("["
+emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
                                u"\U0001F600-\U0001F64F"  # emoticons
                                u"\U0001F300-\U0001F5FF"  # symbols & pictographs
                                u"\U0001F680-\U0001F6FF"  # transport & map symbols
                                u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
                                "]{1}?", flags=re.UNICODE)
-emoji_pattern2 = re.compile(
-    u"(\ud83d[\ude00-\ude4f])|"  # emoticons
-    u"(\ud83c[\udf00-\uffff])|"  # symbols & pictographs (1 of 2)
-    u"(\ud83d[\u0000-\uddff])|"  # symbols & pictographs (2 of 2)
-    u"(\ud83d[\ude80-\udeff])|"  # transport & map symbols
-    u"(\ud83c[\udde0-\uddff])"  # flags (iOS)
-    "+", flags=re.UNICODE)
 
-non_emoji_pattern = re.compile(
-    # '[^a-zA-Z0-9]'
-    '[^\w\.\'"\-\?!,\\/\$\^\{\[\(\|\)\*\+>=&%#@]{1}?'
-    # '[^\w@]{1}?'
-)
+split_pat = re.compile("([" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
+                               u"\U0001F600-\U0001F64F"  # emoticons
+                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                               "]{1}?)|[\s\.\!\?\(\),\*\":]+", flags=re.UNICODE)
 
-def clean_data():
+
+unknown_pattern = re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
+
+def pre_clean(filepath):
+    pass
+
+def clean_data(content, finalpath):
     start_t = time.time()
-    with open(process_path, 'r+') as f:
-        content = f.read()
-        make_log('finding all emojis')
-        all_emoji = re.findall(non_emoji_pattern, content)
 
-        make_log('distincting emojis')
-        distincted_emoji = set(all_emoji)
-        # print(all_emoji)
-        # print(distincted_emoji)
+    emojis = find_all_emojis(content)
+    unknowns, puncwords = find_all_unknowns_and_puncwords(content)
 
-        make_log('replacing emoji')
-        for emoji in distincted_emoji:
-            content = content.replace(emoji, ' %s ' % emoji)
+    make_log('replacing unknown')
+    for unk in unknowns:
+        content = content.replace(unk, ' <unk> ')
+    make_log('unknowns replacement spent time: %ds' % (time.time() - start_t))
 
-        make_log('writing file')
-        f.seek(0, os.SEEK_SET)
-        f.write(content)
+    make_log('replacing puncword')
+    for k in puncwords.keys():
+        for word in puncwords[k]:
+            content = content.replace(word, k)
+    make_log('puncword replacement spent time: %ds' % (time.time() - start_t))
+
+    fw = open(finalpath, 'w')
+    make_log('writing file')
+    fw.write(content)
+    fw.flush()
+    fw.close()
     end_t = time.time()
     spend = end_t - start_t
     make_log(spend)
 
-def word_freq():
-    full_path = '/Users/side/Downloads/emoji_sample.txt'
-    sample_path = '/Users/side/Downloads/emoji_sample_head.txt'
-    st_path = 'sampletest.txt'
-
-    with open(process_path, 'r') as f:
+def word_freq(filepath):
+    with open(filepath, 'r') as f:
         content = f.read()
+        make_log('replacing all enter')
+        content.replace('\n', ' <eos> ')
 
-        make_log('replace enter and split')
-        word_list = re.split('\s+', content.replace('\n', ' <eos> '))
+        word_list = re.split(split_pat, content.lower())
+
         make_log('wordlist length: %d' % len(word_list))
         counter = collections.Counter(word_list)
         st = time.time()
@@ -72,63 +79,92 @@ def word_freq():
         words, _ = list(zip(*counter_pairs))
         make_log('length before filter: %d' % len(words))
 
-        words = list(filter(limit_filter, words))
-        make_log(type(words))
+        # words = list(filter(limit_filter, words))[:10000]
         make_log('length after filter: %d' % len(words))
         make_log('writing word file: words.txt')
         with open('words.txt', 'w') as wf:
             wf.writelines('\n'.join(words))
 
-        pass
+def find_all_emojis(content):
+    make_log('finding all emojis')
+    all_emoji = re.findall(emoji_pattern, content)
+    make_log('distincting emojis')
+    return set(all_emoji)
 
-def check_sample():
-    emoji_pattern = re.compile(".*["
-                               u"\U0001F600-\U0001F64F"  # emoticons
-                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                               "].*", flags=re.UNICODE)
-    emoji_pattern2 = re.compile(
-    u"(\ud83d[\ude00-\ude4f])|"  # emoticons
-    u"(\ud83c[\udf00-\uffff])|"  # symbols & pictographs (1 of 2)
-    u"(\ud83d[\u0000-\uddff])|"  # symbols & pictographs (2 of 2)
-    u"(\ud83d[\ude80-\udeff])|"  # transport & map symbols
-    u"(\ud83c[\udde0-\uddff])"  # flags (iOS)
-    "+", flags=re.UNICODE)
 
-    full_path = '/Users/side/Downloads/emoji_sample.txt'
-    with open(full_path, 'r') as f:
-        ret = f.readlines(10240)
-        for l in ret:
-            mat = emoji_pattern.match(l)
-            if mat:
-                make_log(l)
+def find_all_unknowns_and_puncwords(content):
+    pat_other = re.compile('[\!@#\$%\^&\*\(\)\.\?"/\\\[\]{}\|=\+\-_\$;:,]+|^\d+[\$%]*$|^[\d:/\-]+$')
+    pat_pun = re.compile('[\!@#\$%\^&\*\(\)\.\?"/\\\[\]{}\|=\+\-_\$;:,\d]+$')
+    pat_dupword = re.compile('.*(?P<dup>\w)(?P=dup){3,}.*')
 
-def test_writelines():
-    l = ['one', 'two', 'three']
-    with open('test.txt', 'w')as tf:
-        tf.writelines('\n'.join(l))
+    make_log('finding all unknowns')
+    word_list = re.split('[\s\.\?\!\,\(\)\"\;]+', content)
+    ulist = []
+    pdict = {}
+    for word in word_list:
+        if len(word) > 20:
+            ulist.append(word)
+            continue
 
-def test_emoji():
-    pat = re.compile('\W{1}?')
-    non_char = []
-    # with open(st_path, 'r') as f:
-    #     non_char = re.findall(non_emoji_pattern, f.read())
-    #     make_log(set(non_char))
-    s = 'hi i #$%^&*(!'
-    non_char = re.findall(non_emoji_pattern, s)
-    print(non_char)
+        mat = unknown_pattern.match(word)
+        if mat:
+            ulist.append(word)
+            continue
+
+        mat = pat_other.match(word)
+        if mat:
+            ulist.append(word)
+            continue
+
+        mat = pat_dupword.match(word)
+        if mat:
+            ulist.append(word)
+
+        mat = re.search(pat_pun, word)
+        if mat:
+            k = word[:mat.start()]
+            if k not in pdict.keys():
+                pdict.setdefault(k, [])
+            pdict[k].append(word)
+
+    ulist = set(ulist)
+    return ulist, pdict
+
 
 def make_log(m):
-    print('%s -> %s' % (time.asctime(time.localtime(time.time())), str(m)))
+    global logfile
+    fm = '%s -> %s' % (time.asctime(time.localtime(time.time())), str(m))
+    logfile.write(fm)
+    logfile.write('\n')
+    logfile.flush()
+    # print(fm)
 
 def limit_filter(word):
-    pat = re.compile(r'^[!@#$%^&*().?\'"/\[]{}|=+-_$')
-    return len(word) < 20 and not pat.match(word)
+    pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
+    mat = pat.match(word)
+    return len(word) < 20 and not mat
+
+
+def get_test_and_valid_data():
+    with open('emoji_sample.txt', 'r') as ef:
+        lines = ef.readlines()
+        valid_content = lines[10001:20000]
+        test_content = lines[20001:30000]
+
+        clean_data('\n'.join(valid_content), valid_path)
+        clean_data('\n'.join(test_content), test_path)
+
+def test_split():
+    with open(full_orignal_path, 'r') as fr:
+        content = fr.read(1024*1024)
+        words = re.split(split_pat, content)
+        for w in words:
+            print(w)
 
 if __name__ == '__main__':
-    clean_data()
-    word_freq()
-    # check_sample()
-    # test_writelines()
-    # test_emoji()
+    with open(full_orignal_path, 'r') as sop:
+        clean_data(sop.read(1024*1024), full_processed_path)
+        word_freq(full_processed_path)
+    # get_test_and_valid_data()
+    # test_split()
+    logfile.close()
