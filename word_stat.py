@@ -16,24 +16,25 @@ test_path = './data/emoji.test.txt'
 logfile = open('process_log.txt', 'a')
 
 emoji_pattern = re.compile("[" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
-                               u"\U0001F600-\U0001F64F"  # emoticons
-                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                               "]{1}?", flags=re.UNICODE)
+                           u"\U0001F600-\U0001F64F"  # emoticons
+                           u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                           u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                           u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                           "]{1}?", flags=re.UNICODE)
 
 split_pat = re.compile("([" u"\U00002300-\U000023FF"u"\U00002600-\U000026FF"  # Miscellaneous Symbols
-                               u"\U0001F600-\U0001F64F"  # emoticons
-                               u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-                               u"\U0001F680-\U0001F6FF"  # transport & map symbols
-                               u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-                               "]{1}?)|[\s\.\!\?\(\),\*\":]+", flags=re.UNICODE)
-
+                       u"\U0001F600-\U0001F64F"  # emoticons
+                       u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+                       u"\U0001F680-\U0001F6FF"  # transport & map symbols
+                       u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
+                       "]{1}?)|[\s\.\!\?\(\),\*\":]+", flags=re.UNICODE)
 
 unknown_pattern = re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
 
+
 def pre_clean(filepath):
     pass
+
 
 def clean_data(content, finalpath):
     start_t = time.time()
@@ -61,6 +62,7 @@ def clean_data(content, finalpath):
     spend = end_t - start_t
     make_log(spend)
 
+
 def word_freq(filepath):
     with open(filepath, 'r') as f:
         content = f.read()
@@ -73,9 +75,9 @@ def word_freq(filepath):
         counter = collections.Counter(word_list)
         st = time.time()
         make_log('sorting pairs')
-        counter_pairs = sorted(counter.items(), key = lambda x: (-x[1], x[0]))
+        counter_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
         et = time.time()
-        make_log(et-st)
+        make_log(et - st)
         words, _ = list(zip(*counter_pairs))
         make_log('length before filter: %d' % len(words))
 
@@ -84,6 +86,7 @@ def word_freq(filepath):
         make_log('writing word file: words.txt')
         with open('words.txt', 'w') as wf:
             wf.writelines('\n'.join(words))
+
 
 def find_all_emojis(content):
     make_log('finding all emojis')
@@ -139,6 +142,7 @@ def make_log(m):
     logfile.flush()
     # print(fm)
 
+
 def limit_filter(word):
     pat = re.compile('[\!@#\$%\^&\*\(\)\.\?\'"/\\\[\]{}\|=\+\-_\$;:]+')
     mat = pat.match(word)
@@ -154,16 +158,18 @@ def get_test_and_valid_data():
         clean_data('\n'.join(valid_content), valid_path)
         clean_data('\n'.join(test_content), test_path)
 
+
 def test_split():
     with open(full_orignal_path, 'r') as fr:
-        content = fr.read(1024*1024)
+        content = fr.read(1024 * 1024)
         words = re.split(split_pat, content)
         for w in words:
             print(w)
 
+
 if __name__ == '__main__':
     with open(full_orignal_path, 'r') as sop:
-        clean_data(sop.read(1024*1024), full_processed_path)
+        clean_data(sop.read(1024 * 1024), full_processed_path)
         word_freq(full_processed_path)
     # get_test_and_valid_data()
     # test_split()
