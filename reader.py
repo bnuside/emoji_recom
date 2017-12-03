@@ -6,7 +6,7 @@ import collections
 import os
 import sys
 import re
-from Emoji import EmojiChar
+import Pats
 
 import tensorflow as tf
 
@@ -14,26 +14,39 @@ Py3 = sys.version_info[0] == 3
 
 
 def _read_words(filename):
-    ec = EmojiChar()
+    parts = _read_emojis(filename)
+    ret = []
+    for part in parts:
+        if len(part) < 1:
+            continue
+
+        temp = re.split(Pats.get_word_split(), part)
+        for word in temp:
+            if len(word) < 1:
+                continue
+            ret.append(word)
+
+    return ret
+
+
+def _read_emojis(filename):
     with tf.gfile.GFile(filename, 'r') as f:
         if Py3:
-            fr = f.read()
-            frr = fr.replace('\n', ' <eos> ')
-            frrs = re.split(ec.split_pat, frr)
-            return frrs
-            # return f.read().replace('\n', '<eos>').split()
+            content = re.sub('\n', ' <eos> ', f.read())
         else:
-            return f.read().decode('utf-8').replace('\n', '<eos>').split()
+            content = re.sub('\n', ' <eos> ', f.read().decode('utf-8'))
+
+        return re.split(Pats.get_easy_emoji_split(), content)
 
 
-def _build_vocab(filename):
+def _build_vocab(filename, vocab_size):
     data = _read_words(filename)
 
     counter = collections.Counter(data)
     count_pairs = sorted(counter.items(), key=lambda x: (-x[1], x[0]))
 
     words, _ = list(zip(*count_pairs))
-    word_to_id = dict(zip(words, range(len(words))))
+    word_to_id = dict(zip(words, range(vocab_size)))
 
     # 将单词转换成id，词频高的单词，id小
     return word_to_id
@@ -41,22 +54,17 @@ def _build_vocab(filename):
 
 def _file_to_word_ids(filename, word_to_id):
     data = _read_words(filename)
-    ret = []
-    for word in data:
-        if word in word_to_id:
-            ret.append(word_to_id[word])
 
     # 返回单词对应的id列表
-    return ret
-    # return [word_to_id[word] for word in data if word in word_to_id]
+    return [word_to_id[word] for word in data if word in word_to_id]
 
 
-def raw_data(data_path=None):
+def raw_data(data_path=None, vocab_size=10000):
     train_path = os.path.join(data_path, 'emoji.train.txt')
     valid_path = os.path.join(data_path, 'emoji.valid.txt')
     test_path = os.path.join(data_path, 'emoji.test.txt')
 
-    word_to_id = _build_vocab(train_path)
+    word_to_id = _build_vocab(train_path, vocab_size)
     train_data = _file_to_word_ids(train_path, word_to_id)
     valid_data = _file_to_word_ids(valid_path, word_to_id)
     test_data = _file_to_word_ids(test_path, word_to_id)
@@ -112,4 +120,4 @@ def data_producer(raw_data, batch_size, num_steps, name=None):
 
 
 if __name__ == '__main__':
-    clean_data('emoji_sample.txt')
+    _read_words('./data/emoji.train.txt')

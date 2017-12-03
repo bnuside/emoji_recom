@@ -3,16 +3,29 @@ import re
 import os
 import time
 import random
-from Emoji import EmojiChar
+import Pats
 
 raw_sample_path = 'emoji_sample.txt'
 logfile = open('process_log.txt', 'a')
 
 
-def _bad_line(content, **kwargs):
-    non_single_alphabet_pat = re.compile('^[^a-zA-Z]+$')
-    margin = '[\s\?\.\!,;:<>\[\]\{\}\-\+\=\(\)\*\d@#\$\^\&\n]'
-    single_word_pat = re.compile(r'^%s*\b\w+\b%s*$' % (margin, margin))
+def exeTime(func):
+    def newFunc(*args, **args2):
+        t0 = time.time()
+        print("@%s, {%s} start" % (time.strftime("%X", time.localtime()), func.__name__))
+        back = func(*args, **args2)
+        print("@%s, {%s} end" % (time.strftime("%X", time.localtime()), func.__name__))
+        print("%.3fs taken for {%s}" % (time.time() - t0, func.__name__))
+        return back
+
+    return newFunc
+
+
+@exeTime
+def _bad_line(content):
+    non_single_alphabet_pat = re.compile(Pats.NON_SINGLE_ALPHA)
+    margin = Pats.BOUNDARIES
+    single_word_pat = re.compile(Pats.SINGLE_WORD)
 
     lines = content.splitlines(True)
     ind = 0
@@ -23,7 +36,7 @@ def _bad_line(content, **kwargs):
             ind += 1
             continue
         mat1 = non_single_alphabet_pat.match(line)
-        mat2 = kwargs['emoji_char'].unknown_pat.match(line)
+        mat2 = Pats.get_unknown_pat()[1].match(line)
         mat3 = single_word_pat.match(line)
         if mat1 or mat2 or mat3:
             lines[ind] = ''
@@ -31,6 +44,7 @@ def _bad_line(content, **kwargs):
     return ''.join(lines)
 
 
+@exeTime
 def split_data(filepath, content):
     train_path = os.path.join(filepath, 'emoji.train.txt')
     valid_path = os.path.join(filepath, 'emoji.valid.txt')
@@ -46,14 +60,6 @@ def split_data(filepath, content):
 
     valid_begin = random.randrange(0, train_begin)
     valid_end = valid_begin + total_len // 4
-
-    # print('total length %d' % total_len)
-    # print('train begin %d' % train_begin)
-    # print('train end %d' % train_end)
-    # print('valid begin %d' % valid_begin)
-    # print('valid end %d' % valid_end)
-    # print('half %d' % (total_len // 2))
-    # print('qual %d' % (total_len // 4))
 
     if valid_end < train_begin:
         with open(valid_path, 'w') as valid_file:
@@ -72,85 +78,43 @@ def split_data(filepath, content):
             test_file.writelines(lines[(valid_end + train_end - train_begin):])
 
 
+@exeTime
 def emoji_line(content):
-    ec = EmojiChar()
     lines = content.splitlines()
     emoji_lines = []
     for line in lines:
-        if re.search(ec.emoji_pat, line):
+        if re.search(Pats.get_emoji_pat(easy=True), line):
             emoji_lines.append(line)
 
     return '\n'.join(emoji_lines)
 
 
+@exeTime
 def clean_data(filepath, emoji_only=False):
     start_t = time.time()
-    ec = EmojiChar()
-    karg = {'emoji_char': ec}
 
     with open(raw_sample_path, 'r') as fr:
-        content = fr.read()
+        content = fr.read().lower()
 
-    content = _bad_line(content, **karg)
-
+    content = _bad_line(content)
     if emoji_only:
         content = emoji_line(content)
 
-    unknowns, puncwords = find_all_unknowns_and_puncwords(content, **karg)
-
-    make_log('replacing unknown')
-    for unk in unknowns:
-        content = content.replace(unk, '<unk>')
-    make_log('unknowns replacement spent time: %ds' % (time.time() - start_t))
-
-    make_log('replacing puncword')
-    for k in puncwords.keys():
-        for word in puncwords[k]:
-            content = content.replace(word, k)
-    make_log('puncword replacement spent time: %ds' % (time.time() - start_t))
+    content = replace_unknown(content)
 
     split_data(filepath, content)
     spend = time.time() - start_t
     make_log(spend)
 
 
-def find_all_unknowns_and_puncwords(content, **kwargs):
-    pat_other = re.compile('[\!@#\$%\^&\*\(\)\.\?"/\\\[\]{}\|=\+\-_\$;:,]+|^\d+[\$%]*$|^[\d:/\-]+$')
-    pat_pun = re.compile('[\!@#\$%\^&\*\(\)\.\?"/\\\[\]{}\|=\+\-_\$;:,\d]+$')
-    pat_dupword = re.compile('.*(?P<dup>\w)(?P=dup){3,}.*')
+@exeTime
+def replace_unknown(content):
+    pat_unk1, pat_unk2 = Pats.get_unknown_pat()
 
-    make_log('finding all unknowns')
-    word_list = re.split('[\s\.\?\!\,\(\)\"\;]+', content)
-    ulist = []
-    pdict = {}
-    for word in word_list:
-        if len(word) > 20:
-            ulist.append(word)
-            continue
-
-        mat = kwargs['emoji_char'].unknown_pat.match(word)
-        if mat:
-            ulist.append(word)
-            continue
-
-        mat = pat_other.match(word)
-        if mat:
-            ulist.append(word)
-            continue
-
-        mat = pat_dupword.match(word)
-        if mat:
-            ulist.append(word)
-
-        mat = re.search(pat_pun, word)
-        if mat:
-            k = word[:mat.start()]
-            if k not in pdict.keys():
-                pdict.setdefault(k, [])
-            pdict[k].append(word)
-
-    ulist = set(ulist)
-    return ulist, pdict
+    content = pat_unk1.sub('<unk>', content)
+    content = pat_unk2.sub('<unk>', content)
+    content = Pats.get_punc_pat().sub(' ', content)
+    return content
 
 
 def make_log(m):
@@ -160,6 +124,10 @@ def make_log(m):
     logfile.write('\n')
     logfile.flush()
     # print(fm)
+
+
+def test_rp_un():
+    pass
 
 
 if __name__ == '__main__':
