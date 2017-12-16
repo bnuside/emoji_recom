@@ -115,7 +115,7 @@ def replace_unknown(content):
 
 
 @exeTime
-def replace_tripdup_word(content):
+def replace_tripdup_word2(content):
     pat_dup = re.compile(r'(?P<dup>[a-zA-Z_])(\1{2,})')
     dup = re.search(pat_dup, content, flags=0)
     while dup:
@@ -124,6 +124,22 @@ def replace_tripdup_word(content):
 
     return content
 
+
+@exeTime
+def replace_tripdup_word(content):
+    pat_dup = re.compile(r'(?P<dup>[a-zA-Z_])(\1{2,})')
+
+    lines = content.splitlines()
+    for ind, line in enumerate(lines):
+        # print(line, ind)
+        dup = re.search(pat_dup, line, flags=0)
+        while dup:
+            lines[ind] = line[:dup.start() + 1] + line[dup.end():]
+            line = line[:dup.start() + 1] + line[dup.end():]
+            dup = re.search(pat_dup, line, flags=0)
+
+    content = '\n'.join(lines)
+    return content
 
 if __name__ == '__main__':
     clean_data('./data/', emoji_only=False)
