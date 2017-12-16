@@ -35,7 +35,7 @@ flags.DEFINE_string('rnn_mode', None,
                     'The low level implementation of lstm cell: one of CUDNN, '
                     'BASIC, and BLOCK, representing cudnn_lstm, basic_lstm, '
                     'and lstm_block_cell classes.')
-flags.DEFINE_bool('emoji_only', True, 'data clean make emoji only')
+flags.DEFINE_bool('emoji_only', False, 'data clean make emoji only')
 FLAGS = flags.FLAGS
 BASIC = "basic"
 BLOCK = "block"
