@@ -5,13 +5,13 @@ class Config(object):
     max_grad_norm = 5
     num_layers = 2
     num_steps = 35
-    hidden_size = 650
-    max_epoch = 6
+    hidden_size = 1000
+    max_epoch = 16
     max_max_epoch = 39
     keep_prob = 0.5
     lr_decay = 0.8
-    batch_size = 20
-    vocab_size = 10000
+    batch_size = 25
+    vocab_size = 12000
     rnn_mode = 'block'
 
 

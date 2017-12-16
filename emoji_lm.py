@@ -22,9 +22,9 @@ logging = tf.logging
 flags.DEFINE_string(
     'model', 'train',
     'train or test model')
-flags.DEFINE_string('data_path', './data/',
+flags.DEFINE_string('data_path', 'data/',
                     'Where the training/test data is stored.')
-flags.DEFINE_string('save_path', None,
+flags.DEFINE_string('save_path', 'saved_model',
                     'Model output directory.')
 flags.DEFINE_bool('clean_data', False, 'Since data cleaned, no need to do it again while not necessary')
 flags.DEFINE_integer('num_gpus', 0,
@@ -35,6 +35,7 @@ flags.DEFINE_string('rnn_mode', None,
                     'The low level implementation of lstm cell: one of CUDNN, '
                     'BASIC, and BLOCK, representing cudnn_lstm, basic_lstm, '
                     'and lstm_block_cell classes.')
+flags.DEFINE_bool('emoji_only', True, 'data clean make emoji only')
 FLAGS = flags.FLAGS
 BASIC = "basic"
 BLOCK = "block"
@@ -116,14 +117,13 @@ def main(_):
             % (len(gpus), FLAGS.num_gpus))
 
     if FLAGS.clean_data:
-        sample_data.clean_data(FLAGS.data_path, emoji_only=True)
-
+        sample_data.clean_data(FLAGS.data_path, emoji_only=FLAGS.emoji_only)
     config = get_config()
     eval_config = get_config()
     eval_config.batch_size = 1
     eval_config.num_steps = 1
 
-    raw_data = reader.raw_data(FLAGS.data_path, config.vocab_size)
+    raw_data = reader.raw_data(FLAGS.data_path, config.vocab_size, FLAGS.clean_data)
     train_data, valid_data, test_data, _ = raw_data
 
     with tf.Graph().as_default():
@@ -186,6 +186,8 @@ def main(_):
             if FLAGS.save_path:
                 print('Saving model to %s.' % FLAGS.save_path)
                 sv.saver.save(session, FLAGS.save_path, global_step=sv.global_step)
+
+    print('finished')
 
 
 if __name__ == '__main__':

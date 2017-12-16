@@ -105,3 +105,9 @@ ENV/
 BUILD
 *.txt
 data/
+saved_model/
+nohup.out
+saved_model-*
+checkpoint
+id_to_word
+word_to_id

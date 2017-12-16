@@ -167,10 +167,17 @@ def test_split():
             print(w)
 
 
+def debug_data():
+    for fn in ['test', 'train', 'valid']:
+        with open('data/emoji.%s.txt' % fn, 'r') as fr:
+            content = fr.read().splitlines()[:100]
+            content = '\n'.join(content)
+
+        with open('debug_data/emoji.%s.txt' % fn, 'w') as fw:
+            fw.write(content)
+
+
 if __name__ == '__main__':
-    with open(full_orignal_path, 'r') as sop:
-        clean_data(sop.read(1024 * 1024), full_processed_path)
-        word_freq(full_processed_path)
-    # get_test_and_valid_data()
+    debug_data()
     # test_split()
     logfile.close()

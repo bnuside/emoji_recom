@@ -53,6 +53,7 @@ class Model(object):
         grads, _ = tf.clip_by_global_norm(tf.gradients(self._cost, tvars),
                                           config.max_grad_norm)
         optimizer = tf.train.GradientDescentOptimizer(self._lr)
+        # optimizer = tf.train.AdamOptimizer(self._lr)
         self._train_op = optimizer.apply_gradients(
             zip(grads, tvars),
             global_step=tf.contrib.framework.get_or_create_global_step())
@@ -64,7 +65,7 @@ class Model(object):
     def _get_lstm_cell(self, config, is_training):
         if config.rnn_mode == 'basic':
             return tf.contrib.rnn.BasicLSTMCell(
-                config.hidden_size, forget_bias=0.0, state_is_tuple=True,
+                config.hidden_size, forget_bias=1.0, state_is_tuple=True,
                 reuse=not is_training)
         if config.rnn_mode == 'block':
             return tf.contrib.rnn.LSTMBlockCell(

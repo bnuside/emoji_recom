@@ -59,7 +59,7 @@ def _file_to_word_ids(filename, word_to_id):
     return [word_to_id[word] for word in data if word in word_to_id]
 
 
-def raw_data(data_path=None, vocab_size=10000):
+def raw_data(data_path=None, vocab_size=10000, finalize=False):
     train_path = os.path.join(data_path, 'emoji.train.txt')
     valid_path = os.path.join(data_path, 'emoji.valid.txt')
     test_path = os.path.join(data_path, 'emoji.test.txt')
@@ -69,6 +69,22 @@ def raw_data(data_path=None, vocab_size=10000):
     valid_data = _file_to_word_ids(valid_path, word_to_id)
     test_data = _file_to_word_ids(test_path, word_to_id)
     vocabulary = len(word_to_id)
+
+    if finalize:
+        wtoid = open('word_to_id', 'w')
+        idtow = open('id_to_word', 'w')
+
+        for key, value in word_to_id.items():
+            # print('key: %s, value: %s' % (key, value))
+            wtoid.write('%s ### %s\n' % (key, value))
+            wtoid.flush()
+
+            idtow.write('%s ### %s\n' % (value, key))
+            idtow.flush()
+
+        wtoid.close()
+        idtow.close()
+
     return train_data, valid_data, test_data, vocabulary
 
 
