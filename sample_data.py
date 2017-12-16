@@ -6,7 +6,6 @@ import random
 import Pats
 
 raw_sample_path = 'emoji_sample.txt'
-logfile = open('process_log.txt', 'a')
 
 
 def exeTime(func):
@@ -91,8 +90,6 @@ def emoji_line(content):
 
 @exeTime
 def clean_data(filepath, emoji_only=False):
-    start_t = time.time()
-
     with open(raw_sample_path, 'r') as fr:
         content = fr.read().lower()
 
@@ -100,11 +97,11 @@ def clean_data(filepath, emoji_only=False):
     if emoji_only:
         content = emoji_line(content)
 
+    content = replace_tripdup_word(content)
+
     content = replace_unknown(content)
 
     split_data(filepath, content)
-    spend = time.time() - start_t
-    make_log(spend)
 
 
 @exeTime
@@ -117,19 +114,17 @@ def replace_unknown(content):
     return content
 
 
-def make_log(m):
-    global logfile
-    fm = '%s -> %s' % (time.asctime(time.localtime(time.time())), str(m))
-    logfile.write(fm)
-    logfile.write('\n')
-    logfile.flush()
-    # print(fm)
+@exeTime
+def replace_tripdup_word(content):
+    pat_dup = re.compile(r'(?P<dup>[a-zA-Z_])(\1{2,})')
+    dup = re.search(pat_dup, content, flags=0)
+    while dup:
+        content = content[:dup.start() + 1] + content[dup.end():]
+        dup = re.search(pat_dup, content, flags=0)
 
-
-def test_rp_un():
-    pass
+    return content
 
 
 if __name__ == '__main__':
-    clean_data('./data/', emoji_only=True)
-    logfile.close()
+    clean_data('./data/', emoji_only=False)
+    # replace_tripdup_word('')
