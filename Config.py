@@ -4,15 +4,33 @@ class Config(object):
     learning_rate = 1.0
     max_grad_norm = 5
     num_layers = 2
-    num_steps = 25
+    num_steps = 35
     hidden_size = 650
-    max_epoch = 14
+    max_epoch = 16
     max_max_epoch = 35
     keep_prob = 0.5
     lr_decay = 0.8
     batch_size = 25
-    vocab_size = 10000
+    vocab_size = 12000
     rnn_mode = 'block'
+
+
+class DebugConfig:
+    """model config."""
+    init_scale = 0.05
+    learning_rate = 1.0
+    max_grad_norm = 5
+    num_layers = 2
+    num_steps = 15
+    hidden_size = 100
+    max_epoch = 2
+    max_max_epoch = 5
+    keep_prob = 0.5
+    lr_decay = 0.8
+    batch_size = 25
+    vocab_size = 1000
+    rnn_mode = 'block'
+
 
 
 class TestConfig(object):
@@ -28,5 +46,5 @@ class TestConfig(object):
     keep_prob = 1.0
     lr_decay = 0.5
     batch_size = 20
-    vocab_size = 10000
+    vocab_size = 12000
     rnn_mode = 'block'

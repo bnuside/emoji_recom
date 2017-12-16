@@ -9,10 +9,10 @@ import numpy as np
 import tensorflow as tf
 
 import reader
-import util
+import random
 import sample_data
 from Model import Model
-from Config import Config, TestConfig
+from Config import Config, TestConfig, DebugConfig
 
 from tensorflow.python.client import device_lib
 
@@ -24,7 +24,7 @@ flags.DEFINE_string(
     'train or test model')
 flags.DEFINE_string('data_path', 'data/',
                     'Where the training/test data is stored.')
-flags.DEFINE_string('save_path', 'saved_model',
+flags.DEFINE_string('save_path', 'saved_model/',
                     'Model output directory.')
 flags.DEFINE_bool('clean_data', False, 'Since data cleaned, no need to do it again while not necessary')
 flags.DEFINE_integer('num_gpus', 0,
@@ -38,6 +38,7 @@ flags.DEFINE_string('rnn_mode', None,
 flags.DEFINE_bool('emoji_only', False, 'data clean make emoji only')
 flags.DEFINE_string('test_path', 'data/emoji.test.txt', 'for calculate predict acculate')
 flags.DEFINE_bool('predict', False, 'used to predict next word with trained model')
+flags.DEFINE_bool('debug', False, 'used for debug')
 FLAGS = flags.FLAGS
 BASIC = "basic"
 BLOCK = "block"
@@ -63,8 +64,18 @@ def run_epoch(session, model, eval_op=None, verbose=False):
 
     fetches = {
         'cost': model.cost,
-        'final_state': model.final_state,
+        'final_state': model.final_state
     }
+    if model.model_type == 'test':
+        fetches = {
+            'cost': model.cost,
+            'final_state': model.final_state,
+            'logits': model.logits,
+            'y': model.y
+        }
+        top3_hit = 0
+        top1_hit = 0
+        total = model.input.epoch_size
     if eval_op is not None:
         fetches['eval_op'] = eval_op
 
@@ -78,15 +89,34 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         cost = vals['cost']
         state = vals['final_state']
 
+        if model.model_type == 'test':
+
+            logits = vals['logits']
+            y = vals['y']
+
+            if np.argmax(logits) == y:
+                top1_hit += 1
+
+            t3_logits = []
+
+            for i in range(3):
+                t3_logits.append(np.argmax(logits))
+                logits[t3_logits[i]] = -len(logits) + i
+
+            if y in t3_logits:
+                top3_hit += 1
+
         costs += cost
         iters += model.input.num_steps
-
         if verbose and step % (model.input.epoch_size // 10) == 10:
             print('%.3f perplexity: %.3f speed: %.0f wps' %
                   (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
                    iters * model.input.batch_size * max(1, FLAGS.num_gpus) /
                    (time.time() - start_time)))
 
+    if model.model_type == 'test':
+        print('top1: ', top1_hit / total)
+        print('top3: ', top3_hit / total)
     return np.exp(costs / iters)
 
 
@@ -95,6 +125,8 @@ def get_config():
     config = None
     if FLAGS.model == 'train':
         config = Config()
+        if FLAGS.debug:
+            config = DebugConfig()
     elif FLAGS.model == 'test':
         config = TestConfig()
     else:
@@ -135,45 +167,39 @@ def main(_):
         with tf.name_scope('Train'):
             train_input = DataInput(config=config, data=train_data, name='TrainInput')
             with tf.variable_scope('Model', reuse=None, initializer=initializer):
-                m = Model(is_training=True, config=config, input_=train_input, num_gpus=FLAGS.num_gpus)
+                m = Model(model_type='train', config=config, input_=train_input, num_gpus=FLAGS.num_gpus)
             tf.summary.scalar('Training Loss', m.cost)
             tf.summary.scalar('Learning Rate', m.lr)
 
         with tf.name_scope('Valid'):
             valid_input = DataInput(config=config, data=valid_data, name='ValidInput')
             with tf.variable_scope('Model', reuse=True, initializer=initializer):
-                mvalid = Model(is_training=False, config=config, input_=valid_input, num_gpus=FLAGS.num_gpus)
+                mvalid = Model(model_type='valid', config=config, input_=valid_input, num_gpus=FLAGS.num_gpus)
             tf.summary.scalar('Validation Loss', mvalid.cost)
 
         with tf.name_scope('Test'):
             test_input = DataInput(
                 config=eval_config, data=test_data, name='TestInput')
             with tf.variable_scope('Model', reuse=True, initializer=initializer):
-                mtest = Model(is_training=False, config=eval_config,
+                mtest = Model(model_type='test', config=eval_config,
                               input_=test_input, num_gpus=FLAGS.num_gpus)
 
         models = {'Train': m, 'Valid': mvalid, 'Test': mtest}
         for name, model in models.items():
             model.export_ops(name)
         metagraph = tf.train.export_meta_graph()
-        if tf.__version__ < '1.1.0' and FLAGS.num_gpus > 1:
-            raise ValueError('num_gpus > 1 is not supported for TensorFlow versions '
-                             'below 1.1.0')
-        soft_placement = False
-        if FLAGS.num_gpus > 1:
-            soft_placement = True
-            util.auto_parallel(metagraph, m)
 
     with tf.Graph().as_default():
         tf.train.import_meta_graph(metagraph)
         for model in models.values():
             model.import_ops()
         sv = tf.train.Supervisor(logdir=FLAGS.save_path)
-        config_proto = tf.ConfigProto(allow_soft_placement=soft_placement)
-        with sv.managed_session(config=config_proto) as session:
+        with sv.managed_session() as session:
 
             if FLAGS.predict:
-                pass
+                print('predicting')
+                run_epoch(session, mtest)
+                return
 
             else:
                 for i in range(config.max_max_epoch):

@@ -5,14 +5,20 @@ import util
 class Model(object):
     """The model."""
 
-    def __init__(self, is_training, config, input_, num_gpus=0):
-        self._is_training = is_training
+    def __init__(self, model_type, config, input_, num_gpus=0):
         self._input = input_
         self._rnn_params = None
         self._cell = None
         self.batch_size = input_.batch_size
         self.num_steps = input_.num_steps
         self.num_gpus = num_gpus
+        self.model_type = model_type
+
+        self._is_training = is_training = True
+
+        if model_type != 'train':
+            self._is_training = is_training = False
+
         size = config.hidden_size
         vocab_size = config.vocab_size
 
@@ -31,7 +37,7 @@ class Model(object):
         softmax_b = tf.get_variable('softmax_b', [vocab_size], dtype=tf.float32)
         logits = tf.nn.xw_plus_b(output, softmax_w, softmax_b)
         # Reshape logits to be a 3-D tensor for sequence loss
-        logits = tf.reshape(logits, [self.batch_size, self.num_steps, vocab_size])
+        logits = tf.reshape(logits, [self.batch_size, self.num_steps, vocab_size], name='logits')
 
         # Use the contrib sequence loss and average over the batches
         loss = tf.contrib.seq2seq.sequence_loss(
@@ -45,8 +51,14 @@ class Model(object):
         self._cost = tf.reduce_sum(loss)
         self._final_state = state
 
+        if model_type == 'test':
+            self.logits = tf.reshape(logits, [-1])
+            self.y = tf.reshape(input_.targets, [-1])
+            return
+
         if not is_training:
             return
+
 
         self._lr = tf.Variable(0.0, trainable=False)
         tvars = tf.trainable_variables()
@@ -116,6 +128,8 @@ class Model(object):
             ops.update(lr=self._lr, new_lr=self._new_lr, lr_update=self._lr_update)
             if self._rnn_params:
                 ops.update(rnn_params=self._rnn_params)
+        if self.model_type == 'test':
+            ops.update(logits=self.logits, y=self.y)
         for name, op in ops.items():
             tf.add_to_collection(name, op)
         self._initial_state_name = util.with_prefix(self._name, 'initial')
@@ -139,6 +153,9 @@ class Model(object):
                     rnn_params,
                     base_variable_scope='Model/RNN')
                 tf.add_to_collection(tf.GraphKeys.SAVEABLE_OBJECTS, params_saveable)
+        if self.model_type == 'test':
+            self.logits = tf.get_collection_ref('logits')[0]
+            self.y = tf.get_collection_ref('y')[0]
         self._cost = tf.get_collection_ref(util.with_prefix(self._name, 'cost'))[0]
         num_replicas = self.num_gpus if self._name == 'Train' else 1
         self._initial_state = util.import_state_tuples(

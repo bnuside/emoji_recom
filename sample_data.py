@@ -91,7 +91,7 @@ def emoji_line(content):
 @exeTime
 def clean_data(filepath, emoji_only=False):
     with open(raw_sample_path, 'r') as fr:
-        content = fr.read().lower()
+        content = fr.read(1024*1024).lower()
 
     content = _bad_line(content)
     if emoji_only:
