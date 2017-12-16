@@ -97,7 +97,7 @@ def clean_data(filepath, emoji_only=False):
     if emoji_only:
         content = emoji_line(content)
 
-    content = replace_tripdup_word(content)
+    content = replace_tripdup_word2(content)
 
     content = replace_unknown(content)
 
@@ -115,18 +115,20 @@ def replace_unknown(content):
 
 
 @exeTime
-def replace_tripdup_word2(content):
+def replace_tripdup_word(content):
     pat_dup = re.compile(r'(?P<dup>[a-zA-Z_])(\1{2,})')
-    dup = re.search(pat_dup, content, flags=0)
-    while dup:
-        content = content[:dup.start() + 1] + content[dup.end():]
-        dup = re.search(pat_dup, content, flags=0)
+    ret = re.findall(pat_dup, content)
+
+    if ret:
+        ret = set(ret)
+        for mat in ret:
+            content =content.replace(mat[1], mat[0])
 
     return content
 
 
 @exeTime
-def replace_tripdup_word(content):
+def replace_tripdup_word2(content):
     pat_dup = re.compile(r'(?P<dup>[a-zA-Z_])(\1{2,})')
 
     lines = content.splitlines()
