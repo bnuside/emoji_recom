@@ -94,11 +94,13 @@ def clean_data(filepath, emoji_only=False):
     start_t = time.time()
 
     with open(raw_sample_path, 'r') as fr:
-        content = fr.read().lower()
+        content = fr.read(1024*1024).lower()
 
     content = _bad_line(content)
     if emoji_only:
         content = emoji_line(content)
+
+    content = replace_tripdup_word(content)
 
     content = replace_unknown(content)
 
@@ -117,6 +119,17 @@ def replace_unknown(content):
     return content
 
 
+@exeTime
+def replace_tripdup_word(content):
+    pat_dup = re.compile(r'(?P<dup>[a-zA-Z_])(\1{2,})')
+    dup = re.search(pat_dup, content, flags=0)
+    while dup:
+        content = content[:dup.start()+1] + content[dup.end():]
+        dup = re.search(pat_dup, content, flags=0)
+
+    return content
+
+
 def make_log(m):
     global logfile
     fm = '%s -> %s' % (time.asctime(time.localtime(time.time())), str(m))
@@ -131,5 +144,6 @@ def test_rp_un():
 
 
 if __name__ == '__main__':
-    clean_data('./data/', emoji_only=True)
+    clean_data('./data/', emoji_only=False)
+    # replace_tripdup_word('')
     logfile.close()
