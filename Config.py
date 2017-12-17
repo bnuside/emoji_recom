@@ -12,7 +12,7 @@ class Config(object):
     lr_decay = 0.8
     batch_size = 25
     vocab_size = 12000
-    rnn_mode = 'block'
+    rnn_mode = 'basic'
 
 
 class DebugConfig:
@@ -29,7 +29,7 @@ class DebugConfig:
     lr_decay = 0.8
     batch_size = 25
     vocab_size = 1000
-    rnn_mode = 'block'
+    rnn_mode = 'basic'
 
 
 class TestConfig(object):
@@ -46,4 +46,4 @@ class TestConfig(object):
     lr_decay = 0.5
     batch_size = 20
     vocab_size = 12000
-    rnn_mode = 'block'
+    rnn_mode = 'basic'
