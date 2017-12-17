@@ -44,6 +44,6 @@ class TestConfig(object):
     max_max_epoch = 1
     keep_prob = 1.0
     lr_decay = 0.5
-    batch_size = 20
+    batch_size = 25
     vocab_size = 12000
     rnn_mode = 'basic'
