@@ -36,7 +36,7 @@ flags.DEFINE_string('rnn_mode', None,
                     'BASIC, and BLOCK, representing cudnn_lstm, basic_lstm, '
                     'and lstm_block_cell classes.')
 flags.DEFINE_bool('emoji_only', False, 'data clean make emoji only')
-flags.DEFINE_string('test_path', 'data/emoji.test.txt', 'for calculate predict acculate')
+flags.DEFINE_string('test_path', 'test.txt', 'for calculate predict acculate')
 flags.DEFINE_bool('predict', False, 'used to predict next word with trained model')
 flags.DEFINE_bool('debug', False, 'used for debug')
 FLAGS = flags.FLAGS
@@ -55,7 +55,7 @@ class DataInput(object):
             data, batch_size, num_steps, name=name)
 
 
-def run_epoch(session, model, eval_op=None, verbose=False):
+def run_epoch(session, model, emoji_id=None, eval_op=None, verbose=False):
     """Runs the model on the given data."""
     start_time = time.time()
     costs = 0.0
@@ -73,9 +73,12 @@ def run_epoch(session, model, eval_op=None, verbose=False):
             'logits': model.logits,
             'y': model.y
         }
-        top3_hit = 0
-        top1_hit = 0
-        total = model.input.epoch_size
+        top3_word_miss = 0
+        top1_word_miss = 0
+        top1_emoji_hit = 0
+        top3_emoji_hit = 0
+        emoji_total = 0
+        word_total = 0
     if eval_op is not None:
         fetches['eval_op'] = eval_op
 
@@ -90,21 +93,29 @@ def run_epoch(session, model, eval_op=None, verbose=False):
         state = vals['final_state']
 
         if model.model_type == 'test':
-
             logits = vals['logits']
             y = vals['y']
 
-            if np.argmax(logits) == y:
-                top1_hit += 1
-
+            if y in emoji_id:
+                emoji_total += 1
+                if np.argmax(logits) == y:
+                    top1_emoji_hit += 1
+            else:
+                word_total += 1
+                if np.argmax(logits) != y:
+                    top1_word_miss += 1
             t3_logits = []
 
             for i in range(3):
                 t3_logits.append(np.argmax(logits))
                 logits[t3_logits[i]] = -len(logits) + i
 
-            if y in t3_logits:
-                top3_hit += 1
+            if y in emoji_id:
+                if y in t3_logits:
+                    top3_emoji_hit += 1
+            else:
+                if y not in t3_logits:
+                    top3_word_miss += 1
 
         costs += cost
         iters += model.input.num_steps
@@ -115,8 +126,11 @@ def run_epoch(session, model, eval_op=None, verbose=False):
                    (time.time() - start_time)))
 
     if model.model_type == 'test':
-        print('top1: ', top1_hit / total)
-        print('top3: ', top3_hit / total)
+        print('top1 emoji recall: ', top1_emoji_hit / emoji_total)
+        print('top3 emoji recall: ', top3_emoji_hit / emoji_total)
+        print('top1 word miss:' ,top1_word_miss / word_total)
+        print('top3 word miss:' ,top3_word_miss / word_total)
+
     return np.exp(costs / iters)
 
 
@@ -152,13 +166,17 @@ def main(_):
 
     if FLAGS.clean_data:
         sample_data.clean_data(FLAGS.data_path, emoji_only=FLAGS.emoji_only)
+
+    if FLAGS.predict:
+        sample_data.clean_test_data(FLAGS.data_path, FLAGS.test_path, emoji_only=FLAGS.emoji_only)
+
     config = get_config()
     eval_config = get_config()
     eval_config.batch_size = 1
     eval_config.num_steps = 1
 
     raw_data = reader.raw_data(FLAGS.data_path, config.vocab_size, FLAGS.clean_data)
-    train_data, valid_data, test_data, _ = raw_data
+    train_data, valid_data, test_data, emoji_id, _ = raw_data
 
     with tf.Graph().as_default():
         initializer = tf.random_uniform_initializer(-config.init_scale,
@@ -198,7 +216,7 @@ def main(_):
 
             if FLAGS.predict:
                 print('predicting')
-                run_epoch(session, mtest)
+                run_epoch(session, mtest, emoji_id)
                 return
 
             else:
@@ -213,7 +231,7 @@ def main(_):
                     valid_perplexity = run_epoch(session, mvalid)
                     print('Epoch: %d Valid Perplexity: %.3f' % (i + 1, valid_perplexity))
 
-            test_perplexity = run_epoch(session, mtest)
+            test_perplexity = run_epoch(session, mtest, emoji_id)
             print('Test Perplexity: %.3f' % test_perplexity)
 
             if FLAGS.save_path:

@@ -57,6 +57,9 @@ def get_unknown_pat():
     return pat_unk1, pat_unk2
 
 
+def get_pun_pat():
+    pun = r'[\"\-\*#@\d\?\!]+'
+
 def get_emojicode_list():
     return _emojis
 

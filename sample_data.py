@@ -91,17 +91,33 @@ def emoji_line(content):
 @exeTime
 def clean_data(filepath, emoji_only=False):
     with open(raw_sample_path, 'r') as fr:
-        content = fr.read(1024*1024).lower()
+        content = fr.read(1024 * 1024).lower()
+
+    content = _bad_line(content)
+    if emoji_only:
+        content = emoji_line(content)
+    content = replace_pun_to_space(content)
+    content = replace_tripdup_word(content)
+    content = replace_unknown(content)
+
+    split_data(filepath, content)
+
+
+@exeTime
+def clean_test_data(filepath, test_raw_path, emoji_only=False):
+    with open(test_raw_path, 'r') as fr:
+        content = fr.read().lower()
 
     content = _bad_line(content)
     if emoji_only:
         content = emoji_line(content)
 
+    content = replace_pun_to_space(content)
     content = replace_tripdup_word(content)
-
     content = replace_unknown(content)
 
-    split_data(filepath, content)
+    with open('%s/emoji.test.txt' % filepath, 'w') as fw:
+        fw.write(content)
 
 
 @exeTime
@@ -111,6 +127,13 @@ def replace_unknown(content):
     content = pat_unk1.sub('<unk>', content)
     content = pat_unk2.sub('<unk>', content)
     content = Pats.get_punc_pat().sub(' ', content)
+    return content
+
+
+@exeTime
+def replace_pun_to_space(content):
+    pat = Pats.get_punc_pat()
+    content = pat.sub(' ', content)
     return content
 
 
@@ -140,6 +163,7 @@ def replace_tripdup_word(content):
 
     content = '\n'.join(lines)
     return content
+
 
 if __name__ == '__main__':
     clean_data('./data/', emoji_only=False)

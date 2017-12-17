@@ -59,6 +59,19 @@ def _file_to_word_ids(filename, word_to_id):
     return [word_to_id[word] for word in data if word in word_to_id]
 
 
+def _emoji_id(word_to_id):
+    eid = []
+    for key, value in word_to_id.items():
+        mat = re.match(Pats.get_emoji_pat(), key)
+        if mat:
+            eid.append(value)
+
+    with open('temp.txt', 'w') as fw:
+        for key, _ in word_to_id.items():
+            fw.write(key+'\n')
+            fw.flush()
+    return eid
+
 def raw_data(data_path=None, vocab_size=10000, finalize=False):
     train_path = os.path.join(data_path, 'emoji.train.txt')
     valid_path = os.path.join(data_path, 'emoji.valid.txt')
@@ -69,6 +82,8 @@ def raw_data(data_path=None, vocab_size=10000, finalize=False):
     valid_data = _file_to_word_ids(valid_path, word_to_id)
     test_data = _file_to_word_ids(test_path, word_to_id)
     vocabulary = len(word_to_id)
+
+    emoji_id = _emoji_id(word_to_id)
 
     if finalize:
         wtoid = open('word_to_id', 'w')
@@ -85,7 +100,7 @@ def raw_data(data_path=None, vocab_size=10000, finalize=False):
         wtoid.close()
         idtow.close()
 
-    return train_data, valid_data, test_data, vocabulary
+    return train_data, valid_data, test_data, emoji_id, vocabulary
 
 
 def data_producer(raw_data, batch_size, num_steps, name=None):
@@ -136,4 +151,5 @@ def data_producer(raw_data, batch_size, num_steps, name=None):
 
 
 if __name__ == '__main__':
-    _read_words('./data/emoji.train.txt')
+    # _read_words('./data/emoji.train.txt')
+    raw_data('data/')
