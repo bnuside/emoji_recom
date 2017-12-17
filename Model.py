@@ -59,7 +59,6 @@ class Model(object):
         if not is_training:
             return
 
-
         self._lr = tf.Variable(0.0, trainable=False)
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self._cost, tvars),

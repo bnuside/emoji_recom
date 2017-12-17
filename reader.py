@@ -66,11 +66,8 @@ def _emoji_id(word_to_id):
         if mat:
             eid.append(value)
 
-    with open('temp.txt', 'w') as fw:
-        for key, _ in word_to_id.items():
-            fw.write(key+'\n')
-            fw.flush()
     return eid
+
 
 def raw_data(data_path=None, vocab_size=10000, finalize=False):
     train_path = os.path.join(data_path, 'emoji.train.txt')
@@ -84,21 +81,6 @@ def raw_data(data_path=None, vocab_size=10000, finalize=False):
     vocabulary = len(word_to_id)
 
     emoji_id = _emoji_id(word_to_id)
-
-    if finalize:
-        wtoid = open('word_to_id', 'w')
-        idtow = open('id_to_word', 'w')
-
-        for key, value in word_to_id.items():
-            # print('key: %s, value: %s' % (key, value))
-            wtoid.write('%s ### %s\n' % (key, value))
-            wtoid.flush()
-
-            idtow.write('%s ### %s\n' % (value, key))
-            idtow.flush()
-
-        wtoid.close()
-        idtow.close()
 
     return train_data, valid_data, test_data, emoji_id, vocabulary
 

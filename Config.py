@@ -32,7 +32,6 @@ class DebugConfig:
     rnn_mode = 'block'
 
 
-
 class TestConfig(object):
     """Tiny config, for testing."""
     init_scale = 0.1

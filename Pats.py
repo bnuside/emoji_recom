@@ -47,11 +47,11 @@ def get_unknown_pat():
                           r'|(?<=%s)\d+[\$]*(?=\b%s*)'
                           r'|(?<=%s)[\d:/\-]+(?=\b%s*)'
                           r'|(?<=%s)(?P<dup>\w)(?P=dup){3,}(?=\b%s*)' % (
-                          boundaries, boundaries, boundaries, boundaries, boundaries, boundaries, boundaries,
-                          boundaries))
+                              boundaries, boundaries, boundaries, boundaries, boundaries, boundaries, boundaries,
+                              boundaries))
     pat_unk2 = re.compile(
         u'(?<=%s)['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+(?=\b%s*)' % (
-        boundaries, boundaries))
+            boundaries, boundaries))
 
     # return re.compile(u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+')
     return pat_unk1, pat_unk2
@@ -59,6 +59,7 @@ def get_unknown_pat():
 
 def get_pun_pat():
     pun = r'[\"\-\*#@\d\?\!]+'
+
 
 def get_emojicode_list():
     return _emojis

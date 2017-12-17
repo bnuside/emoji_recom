@@ -94,5 +94,3 @@ def auto_parallel(metagraph, model):
     optimized_graph = tf_optimizer.OptimizeGraph(rewriter_config, metagraph)
     metagraph.graph_def.CopyFrom(optimized_graph)
     UpdateCollection(metagraph, model)
-
-

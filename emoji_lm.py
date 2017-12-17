@@ -128,8 +128,8 @@ def run_epoch(session, model, emoji_id=None, eval_op=None, verbose=False):
     if model.model_type == 'test':
         print('top1 emoji recall: ', top1_emoji_hit / emoji_total)
         print('top3 emoji recall: ', top3_emoji_hit / emoji_total)
-        print('top1 word miss:' ,top1_word_miss / word_total)
-        print('top3 word miss:' ,top3_word_miss / word_total)
+        print('top1 word miss:', top1_word_miss / word_total)
+        print('top3 word miss:', top3_word_miss / word_total)
 
     return np.exp(costs / iters)
 
