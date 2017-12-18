@@ -62,6 +62,13 @@ def run_epoch(session, model, emoji_id=None, eval_op=None, verbose=False):
     iters = 0
     state = session.run(model.initial_state)
 
+    top3_word_miss = 0
+    top1_word_miss = 0
+    top1_emoji_hit = 0
+    top3_emoji_hit = 0
+    emoji_total = 0
+    word_total = 0
+
     fetches = {
         'cost': model.cost,
         'final_state': model.final_state
@@ -73,13 +80,8 @@ def run_epoch(session, model, emoji_id=None, eval_op=None, verbose=False):
             'logits': model.logits,
             'y': model.y
         }
-        top3_word_miss = 0
-        top1_word_miss = 0
-        top1_emoji_hit = 0
-        top3_emoji_hit = 0
-        emoji_total = 0
-        word_total = 0
         print('words: ', model.input.epoch_size)
+
     if eval_op is not None:
         fetches['eval_op'] = eval_op
 
@@ -125,11 +127,12 @@ def run_epoch(session, model, emoji_id=None, eval_op=None, verbose=False):
                   (step * 1.0 / model.input.epoch_size, np.exp(costs / iters),
                    iters * model.input.batch_size * max(1, FLAGS.num_gpus) /
                    (time.time() - start_time)))
-            if model.model_type == 'test':
-                print('top1 emoji recall: ', top1_emoji_hit / emoji_total)
-                print('top3 emoji recall: ', top3_emoji_hit / emoji_total)
-                print('top1 word miss:', top1_word_miss / word_total)
-                print('top3 word miss:', top3_word_miss / word_total)
+        if model.model_type == 'test' and step % (model.input.epoch_size // 30) == 10:
+            print('*' * 50)
+            print('top1 emoji recall: ', top1_emoji_hit / emoji_total)
+            print('top3 emoji recall: ', top3_emoji_hit / emoji_total)
+            print('top1 word miss:', top1_word_miss / word_total)
+            print('top3 word miss:', top3_word_miss / word_total)
 
     if model.model_type == 'test':
         print('-' * 50)
