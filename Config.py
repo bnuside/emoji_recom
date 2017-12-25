@@ -11,7 +11,7 @@ class Config(object):
     keep_prob = 0.5
     lr_decay = 0.8
     batch_size = 25
-    vocab_size = 12000
+    vocab_size = 30000
     rnn_mode = 'basic'
 
 
@@ -45,5 +45,5 @@ class TestConfig(object):
     keep_prob = 1.0
     lr_decay = 0.5
     batch_size = 25
-    vocab_size = 12000
+    vocab_size = 30000
     rnn_mode = 'basic'

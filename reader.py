@@ -56,7 +56,16 @@ def _file_to_word_ids(filename, word_to_id):
     data = _read_words(filename)
 
     # 返回单词对应的id列表
-    return [word_to_id[word] for word in data if word in word_to_id]
+    ret = []
+    for word in data:
+        if word in word_to_id:
+            ret.append(word_to_id[word])
+        elif '<unk>' in word_to_id:
+            ret.append(word_to_id['<unk>'])
+        else:
+            continue
+    return ret
+    # return [word_to_id[word] for word in data if word in word_to_id]
 
 
 def _emoji_id(word_to_id):
