@@ -1,6 +1,7 @@
 import re
 
-BOUNDARIES = '[\s\?\.\!,;:<>\[\]\{\}\-\+\=\(\)\*\d@#\$\^\&\n]'
+# BOUNDARIES = '[\s\?\.\!,;:<>\[\]\{\}\-\+\=\(\)\*\d@#\$\^\&\n]'
+BOUNDARIES = '[\s]'
 NON_SINGLE_ALPHA = '^[^a-zA-Z]+$'
 SINGLE_WORD = r'^%s*\b\w+\b%s*$' % (BOUNDARIES, BOUNDARIES)
 UKNOWN = u'['u'\U000000A0-\U000022FF'u'\U00002400-\U000025FF'u'\U00002C00-\U0001F000]+'

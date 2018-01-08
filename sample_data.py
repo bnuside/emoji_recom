@@ -165,6 +165,55 @@ def replace_tripdup_word(content):
     return content
 
 
+@exeTime
+def replace_suoxie(content):
+    sub_pair = {'u': ' you ',
+                'b': ' be ',
+                'r': ' are ',
+                'ur': ' your ',
+                'im': ' i\'m ',
+                'didnt': ' didn\'t ',
+                'doesnt': ' doesn\'t ',
+                'dont': ' don\'t ',
+                'wont': ' won\'t ',
+                'cant': ' can\'t ',
+                'aint': ' ain\'t ',
+                'couldnt': ' couldn\'t ',
+                'wouldnt': ' wouldn\'t ',
+                'fuckin': ' fucking ',
+                'thx': ' thanks ',
+                'plz': ' please ',
+                }
+    for key, value in sub_pair.items():
+        pat = re.compile(r'\s%s\s|^%s\s|\s%s$' % (key, key, key))
+        # content = content.replace(key, value)
+        content = pat.sub(value, content)
+    return content
+
+
+@exeTime
+def non_alphabet_emoji():
+    pat = re.compile('[^'u'\U00002300-\U000023FF'u'\U00002600-\U000026FF'  # Miscellaneous Symbols
+                             u'\U0001F600-\U0001F64F'  # emoticons
+                             u'\U0001F300-\U0001F5FF'  # symbols & pictographs
+                             u'\U0001F680-\U0001F6FF'  # transport & map symbols
+                             u'\U0001F1E0-\U0001F1FF'  # flags (iOS)
+                             'a-zA-Z\'\s\-]', flags=re.UNICODE)
+    with open('emoji_sample_head.txt', 'r') as fr:
+        content = fr.read().lower()
+
+    content = pat.sub(' ', content)
+    content = re.sub('\s{2,}', ' ', content)
+    content = replace_tripdup_word(content)
+    content = replace_suoxie(content)
+    content = _bad_line(content)
+
+    with open('temp.txt', 'w') as fw:
+        fw.write(content)
+
 if __name__ == '__main__':
-    clean_data('./data/', emoji_only=False)
+    # clean_data('./data/', emoji_only=False)
     # replace_tripdup_word('')
+    non_alphabet_emoji()
+    s = 'i tell u this. u dont know u\nr'
+    print(replace_suoxie(s))
